@@ -32,6 +32,7 @@ After the world stops it will be archived in a folder called mc-worlds/<world_na
 When you run the `start_mc_world` command again it will automatically select the newest archive and send that to the server.
 
 ## Future Plans
+- Implement tests using BATS
 - Switch to terraform to instantiate and delete servers to allow a much broader amount of cloud coverage
 - Support Cloud Object Storage as an option to store the world file archives when stopping
 - Support incremental backup during runtime for long running servers
