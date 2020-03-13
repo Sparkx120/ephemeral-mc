@@ -1,15 +1,15 @@
-# Aetherial-MC
-This project aims to make it fast and simple to instantiate a minecraft server from your command line straight into the cloud of your choice. Currently only DigitalOcean is support but plans are in place to develop support for many more clouds by migrating the core functionality of the script functionality into terraform.
+# Ephemeral-MC
+##### Version 0.1.0
+##### MIT (c) 2020 SparkX120
 
-The Script currently works by creating a small archive with a startup script for an ubuntu vm to nsitall everything needed to run a dockerized instance of MineCraft's server. An environment file locally is sent with it to configure the server to your liking. When you are finished with your server the shutdown function will backup the server's data directory and environment files and brnig them back to your computer so you can easilly start the server back up again later without having to run it all the time.
-
-This script is great for use with service such as digital ocean that bill hourly since you can get fairly cheap VM time for this price. If you don't mind the thrill you could even run it on a premptive instance in Google for ultra cheap.
+This project aims to make it fast and simple to instantiate a transient minecraft server from your command line straight into the cloud of your choice with automated workd file backup. Currently only DigitalOcean is supported but plans are in place to develop support for many more clouds by migrating the core functionality of the script into a terraform script.
 
 ## How to use
 This script is meant to be used as a shell library. It provides several functions to operate your server. Currently the prerequistes are as follows:
 
 ### Prerequisties
 - doctl - you must login before using this scripts functions
+- sshkeys - you must have an ssk key installed in `~/.ssh/id_rsa`
 
 ### Usage
 ```bash
@@ -38,5 +38,6 @@ When you run the `start_mc_world` command again it will automatically select the
 - Look into options to create VM Images on Digital Ocean to make startup and shutdown faster
 - Add configurable options for VM Host type and size (terraform can help here too)
 - Add more configurable options to the server (an associative array may work so we can just use all options supported by the underlying docker container
+- Generic SSH Key support
 
 
