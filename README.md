@@ -13,19 +13,19 @@ This script is meant to be used as a shell library. It provides several function
 
 ### Usage
 ```bash
-source launch.sh
+source ephemeral-mc.sh
 ```
 
 edit the env.sh and fill in your desired fields and set EULA=TRUE if you accept the Minecraft License
 
 Start the world:
 ```bash
-start_mc_world <world_name>
+start-mc-world <world_name>
 ```
 
 Stop the world:
 ```bash
-stop_mc_world
+stop-mc-world
 ```
 
 After the world stops it will be archived in a folder called mc-worlds/<world_name>
