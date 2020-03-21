@@ -127,6 +127,7 @@ _create_server() {
     
     until netcat -z $DROP_IP 22; do
         echo "Waiting for MC Server SSH Startup"
+        sleep 1
     done
     
     # TODO replace this with a proper ssh check
