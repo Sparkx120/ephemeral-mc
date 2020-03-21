@@ -11,14 +11,26 @@
 ##
 USAGE="$(cat << EOF
   Welcome to Ephemeral MC, a shell library to manage an ephemeral minecraft world in the cloud!
-  Version 0.1.0
+  Version 0.1.1
 
-  Usage:
+  Script Usage:
+    -s --start-mc-world <world_name>
+    -t --stop-mc-world <world_name>
+    -a --accept-eula 
+    -k --ssh-key <ssh-key-name> (default id_rsa)
+
+  Library Usage:
   start-mc-world <world name>
   stop-mc-world
   watch-mc-world-logs-over-ssh
+
+  Shell Variables in Library
+  SSH_KEY
+  ACCEPT_EULA
 EOF
 )"
+SSH_KEY="id_rsa"
+ACCEPT_EULA=false
 
 ##################################################################################
 # General Utility Functions                                                      #
@@ -71,7 +83,7 @@ _set_server_default_vars() {
     fi
     # TODO make this more robust for alternate ssh keys
     if [[ -z "$DO_SSH_KEYS" ]]; then
-        export DO_SSH_KEYS="--ssh-keys `ssh-keygen -l -E md5 -f ~/.ssh/id_rsa.pub | awk '{print $2}' | sed \"s/....//\"`"
+        export DO_SSH_KEYS="--ssh-keys `ssh-keygen -l -E md5 -f ~/.ssh/$SSH_KEY.pub | awk '{print $2}' | sed \"s/....//\"`"
     fi
     if [[ -z "$DO_REGION" ]]; then
         export DO_REGION='--region nyc3'
@@ -95,12 +107,12 @@ _exec_mc_server_over_ssh() {
     ssh root@$DROP_IP << EOF
 cd /
 tar -zxvf /$MC_ARCHIVE
-/bin/bash /data/run-mc.sh $NAME
+/bin/bash /data/run-mc.sh $MC_NAME
 EOF
 }
 
 _stop_mc_server_over_ssh() {
-    MC_ARCHIVE="$NAME-`_mc_world_timestamp`.tar.gz"
+    MC_ARCHIVE="$MC_NAME-`_mc_world_timestamp`.tar.gz"
     ssh root@$DROP_IP << EOF
 cd /
 docker stop mc
@@ -111,47 +123,55 @@ EOF
 
 _create_server() {
     _set_server_default_vars
-    _create_droplet_blocking $1
+    _create_droplet_blocking ephemeral-$1
     
+    until netcat -z $DROP_IP 22; do
+        echo "Waiting for MC Server SSH Startup"
+    done
     
     # TODO replace this with a proper ssh check
     ssh-keyscan -H $DROP_IP >> ~/.ssh/known_hosts
 }
 
 _delete_server() {
-    _delete_droplet $1 
+    _delete_droplet ephemeral-$1 
 }
 
 _create_new_mc_world() {
     echo "Creating a new world $1"
-    NAME=$1
-    MC_ARCHIVE="$NAME-`_mc_world_timestamp`.tar.gz"
-    
+    MC_NAME=$1
+    MC_ARCHIVE="$MC_NAME-`_mc_world_timestamp`.tar.gz"
+
+    if [[ "$ACCEPT_EULA" == "false" ]]; then
+        echo "You have not accepted Minecraft's Eula, you must do so before this script can create a server"
+        exit 1
+    fi
+
     # Init    
-    mkdir -p mc-worlds/$NAME
-    cd mc-worlds/$NAME
+    mkdir -p mc-worlds/$MC_NAME
+    cd mc-worlds/$MC_NAME
     
     # Create new blank archive file    
     mkdir data
     cp ../../lib/run-mc.sh data/
-    cp ../../lib/env.sh data/
+    cp ../../lib/env.sh data/    
     tar -zcf $MC_ARCHIVE data
     rm -rf data
     
-    _create_server $NAME
+    _create_server $MC_NAME
     _exec_mc_server_over_ssh
     cd - 
 }
 
 _start_existing_mc_world() {
     echo "Staring existing world $1"
-    NAME=$1
+    MC_NAME=$1
 
     # Init    
-    cd mc-worlds/$NAME
+    cd mc-worlds/$MC_NAME
     MC_ARCHIVE=`mc_get_newest_archive`
 
-    _create_server $NAME
+    _create_server $MC_NAME
     _exec_mc_server_over_ssh
     cd -
 }
@@ -173,17 +193,18 @@ start-mc-world() {
 stop-mc-world() {
     # Stop and archive the minecraft server currently running in this subshell
     # If for some reason you are in a new shell you can pass the name
-    if [[ -z "$NAME" ]];then
-        if [[ -z "$NAME" ]]; then
+    if [[ -z "$MC_NAME" ]];then
+        if [[ -z "$1" ]]; then
             echo "You Must provide a server name since there is no server being managed by this subshell right now!"
             return -1
         fi
-        NAME=$1
+        MC_NAME=$1
+        DROP_IP=`_get_droplet_ip_by_regex $MC_NAME`
     fi
-    cd mc-worlds/$NAME
+    cd mc-worlds/$MC_NAME
     _stop_mc_server_over_ssh
     cd -
-    _delete_server $NAME
+    _delete_server $MC_NAME
 }
 
 watch-mc-server-logs-over-ssh() {
@@ -196,6 +217,37 @@ EOF
 if (return 0 2>/dev/null); then
     echo "$USAGE"
 else
-    echo "This script is currently only a shell library, please source it to use its functions"
+    START_MC=false
+    STOP_MC=false
+    while [[ -n "$@" ]]; do
+      if [[ "$1" == "--start-mc-world" ]] || [[ "$1" == "-s" ]]; then
+          shift
+          START_MC=true
+          MC_NAME=$1
+      elif [[ "$1" == "--stop-mc-world" ]] || [[ "$1" == "-t" ]]; then
+          shift
+          STOP_MC=true
+          MC_NAME=$1
+      elif [[ "$1" == "--accept-eula" ]] || [[ "$1" == "-a" ]]; then
+          ACCEPT_EULA=true
+      elif [[ "$1" == "--ssh-key" ]] || [[ "$1" == "-k" ]]; then
+          shift
+          SSH_KEY=$1
+      elif [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+          echo "$USAGE"
+      else
+          echo "$USAGE"
+          exit 1
+      fi
+      shift 
+    done
+    
+    if $START_MC; then
+        start-mc-world $MC_NAME
+    fi
+
+    if $STOP_MC; then
+        stop-mc-world $MC_NAME
+    fi
 fi
 
