@@ -224,11 +224,11 @@ else
       if [[ "$1" == "--start-mc-world" ]] || [[ "$1" == "-s" ]]; then
           shift
           START_MC=true
-          MC_NAME=$1
+          INIT_NAME=$1
       elif [[ "$1" == "--stop-mc-world" ]] || [[ "$1" == "-t" ]]; then
           shift
           STOP_MC=true
-          MC_NAME=$1
+          INIT_NAME=$1
       elif [[ "$1" == "--accept-eula" ]] || [[ "$1" == "-a" ]]; then
           ACCEPT_EULA=true
       elif [[ "$1" == "--ssh-key" ]] || [[ "$1" == "-k" ]]; then
@@ -244,11 +244,11 @@ else
     done
     
     if $START_MC; then
-        start-mc-world $MC_NAME
+        start-mc-world $INIT_NAME
     fi
 
     if $STOP_MC; then
-        stop-mc-world $MC_NAME
+        stop-mc-world $INIT_NAME
     fi
 fi
 
